@@ -23,14 +23,15 @@ def draw_edge(state0, state1, color, dim=2, style='-'):
     path = patches.ConnectionPatch(tuple(state0[:2]+1.0), tuple(state1[:2]+1.0), 'data', arrowstyle=style, color=color)
     plt.gca().add_patch(path)
 
-def plot_tree(states, parents, problem, index=0, edge_classes=None):
+
+def plot_tree(states, parents, problem, index=0, edge_classes=None, optimal_path=None):
     states = states
     environment_map = problem["map"]
     init_state = problem["init_state"]
     goal_state = problem["goal_state"]
     dim = init_state.size
-    
-    fig = plt.figure(figsize=(4,4))
+
+    fig = plt.figure(figsize=(4, 4))
 
     rect = patches.Rectangle((0.0, 0.0), 2.0, 2.0, linewidth=1, edgecolor='black', facecolor='none')
     plt.gca().add_patch(rect)
@@ -40,25 +41,45 @@ def plot_tree(states, parents, problem, index=0, edge_classes=None):
     d_y = 2.0 / map_width[1]
     for i in range(map_width[0]):
         for j in range(map_width[1]):
-            if environment_map[i,j] > 0:
-                rect = patches.Rectangle((d_x*i, d_y*j), d_x, d_y, linewidth=1, edgecolor='#253494', facecolor='#253494')
+            if environment_map[i, j] > 0:
+                rect = patches.Rectangle((d_x * i, d_y * j), d_x, d_y, linewidth=1, edgecolor='#253494',
+                                         facecolor='#253494')
                 plt.gca().add_patch(rect)
 
-    for i in range(len(states)-1):
-        draw_node(states[i+1], '#fdbe85', dim=dim)
+    # Convert optimal_path to set of indices for efficient lookup
+    optimal_indices = set()
+    if optimal_path is not None:
+        optimal_indices = set(optimal_path)
+
+    for i in range(len(states) - 1):
+        # Highlight nodes on optimal path differently
+        if optimal_path is not None and (i + 1) in optimal_indices:
+            draw_node(states[i + 1], '#000000', dim=dim)  # Brighter color for optimal path nodes
+        else:
+            draw_node(states[i + 1], '#fdbe85', dim=dim)
 
         if edge_classes is None:
-            draw_edge(states[i+1], states[parents[i+1]], 'green', dim=dim)
-        else:
-            if edge_classes[i+1] == True:
-                draw_edge(states[i+1], states[parents[i+1]], 'blue', dim=dim)
+            # Highlight edges on optimal path
+            if optimal_path is not None and (i + 1) in optimal_indices and parents[i + 1] in optimal_indices:
+                draw_edge(states[i + 1], states[parents[i + 1]], 'red', dim=dim)
             else:
-                draw_edge(states[i+1], states[parents[i+1]], 'green', dim=dim)
-                
+                draw_edge(states[i + 1], states[parents[i + 1]], 'green', dim=dim)
+        else:
+            # Check if edge is on optimal path
+            is_optimal_edge = (optimal_path is not None and
+                               (i + 1) in optimal_indices and
+                               parents[i + 1] in optimal_indices)
+
+            if is_optimal_edge:
+                draw_edge(states[i + 1], states[parents[i + 1]], 'red', dim=dim)
+            elif edge_classes[i + 1] == True:
+                draw_edge(states[i + 1], states[parents[i + 1]], 'blue', dim=dim)
+            else:
+                draw_edge(states[i + 1], states[parents[i + 1]], 'green', dim=dim)
 
     draw_node(init_state, '#e6550d', dim=dim, face=True)
     draw_node(goal_state, '#a63603', dim=dim, face=True)
-    
+
     plt.axis([0.0, 2.0, 0.0, 2.0])
     plt.axis('off')
     plt.axis('square')
